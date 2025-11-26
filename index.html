@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Airport Security Department</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="container">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <!-- Header sidebar dengan logo -->
+      <div class="sidebar-header">
+        <img src="assets/logo-avsec.png" alt="Logo Avsec" class="sidebar-logo">
+        <div class="sidebar-brand">
+          <span class="brand-title">Airport Security Supadio</span>
+        </div>
+        <!-- Tombol tutup sidebar -->
+        <button class="btn-toggle-sidebar" type="button" onclick="toggleSidebar()">☰</button>
+      </div>
+
+      <ul class="sidebar-menu">
+        <li onclick="showPage('home')" class="menu-item">
+          <span class="menu-icon">🏠</span>
+          <span class="menu-text">DASHBOARD</span>
+        </li>
+
+        <li class="menu-title">
+          <span>Portal Avsec Pnk</span>
+        </li>
+
+        <li onclick="showPage('lost')" class="menu-item">
+          <span class="menu-icon">📋</span>
+          <span class="menu-text">LItA</span>
+        </li>
+
+        <li onclick="showPage('sweeping')" class="menu-item">
+          <span class="menu-icon">📋</span>
+          <span class="menu-text">Penyisiran</span>
+        </li>
+
+        <li onclick="showPage('personnel')" class="menu-item">
+          <span class="menu-icon">👮‍♂️</span>
+          <span class="menu-text">Personel</span>
+        </li>
+
+        <li onclick="showPage('Regulation')" class="menu-item">
+          <span class="menu-icon">📘</span>
+          <span class="menu-text">Regulasi</span>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="content">
+      <!-- Tombol buka sidebar (muncul saat sidebar tertutup) -->
+      <button class="btn-toggle-sidebar-open" type="button" onclick="toggleSidebar()">☰</button>
+
+      <!-- DASHBOARD -->
+      <section id="home" class="page active">
+        <h1>Selamat Datang di Portal Airport Security Supadio</h1>
+        <p>Website internal untuk manajemen keamanan dan pelaporan di Bandara Supadio.</p>
+      </section>
+
+      <!-- LOST & FOUND / LItA -->
+      <section id="lost" class="page">
+        <h1>Lost Item Data (LItA)</h1>
+
+        <!-- MENU DIAMANKAN -->
+        <div class="sub-menu-lita">
+          <button type="button" onclick="toggleDiamankan()">Diamankan</button>
+          <span class="menu-desc">Input Data Barang Yang Diamankan</span>
+        </div>
+
+        <!-- FORM BARANG DIAMANKAN (disembunyikan dulu) -->
+        <div id="diamankanSection" class="hidden">
+          <form id="lostForm">
+            <label for="waktuDiamankan">Tanggal &amp; Waktu Diamankan:</label>
+            <input type="datetime-local" id="waktuDiamankan" name="waktuDiamankan" required>
+
+            <label for="shift">Shift:</label>
+            <select id="shift" name="shift" required>
+              <option value="">-- Pilih Shift --</option>
+              <option value="A">Shift A</option>
+              <option value="B">Shift B</option>
+              <option value="C">Shift C</option>
+              <option value="D">Shift D</option>
+            </select>
+
+            <label for="supervisor">Supervisor:</label>
+            <input type="text" id="supervisor" name="supervisor" required>
+
+            <label for="namaBarang">Nama Barang:</label>
+            <input type="text" id="namaBarang" name="namaBarang" required>
+
+            <label for="spesifikasi">Spesifikasi Barang:</label>
+            <textarea id="spesifikasi" name="spesifikasi" placeholder="Contoh: warna, merek, ciri khas" required></textarea>
+
+            <label for="fotoBarang">Foto Barang:</label>
+            <input type="file" id="fotoBarang" name="fotoBarang" accept="image/*">
+
+            <button type="submit">Simpan Data</button>
+          </form>
+        </div>
+
+        <hr>
+
+        <!-- CARI BARANG DIAMANKAN -->
+        <div class="filter-box">
+          <h3>Cari Barang Diamankan</h3>
+
+          <label for="filterTanggal">Tanggal Diamankan:</label>
+          <input type="date" id="filterTanggal" name="filterTanggal">
+          <small>Format input: yyyy-mm-dd</small>
+
+          <br>
+
+          <label for="filterShift">Shift:</label>
+          <select id="filterShift" name="filterShift">
+            <option value="">Semua</option>
+            <option value="A">Shift A</option>
+            <option value="B">Shift B</option>
+            <option value="C">Shift C</option>
+            <option value="D">Shift D</option>
+          </select>
+
+          <button type="button" onclick="filterData()">Filter</button>
+        </div>
+
+        <!-- TABEL DATA BARANG DIAMANKAN -->
+        <table id="tabelBarang">
+          <thead>
+            <tr>
+              <th>Tanggal Diamankan</th>
+              <th>Shift</th>
+              <th>Nama Barang</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- data akan diisi via JavaScript -->
+          </tbody>
+        </table>
+
+        <!-- FORM SERAHTERIMA -->
+        <div id="serahTerimaBox" class="hidden">
+          <h3>Form Serah Terima Barang</h3>
+          <form id="serahForm">
+            <label for="waktuSerah">Tanggal &amp; Waktu Diserahkan:</label>
+            <input type="datetime-local" id="waktuSerah" name="waktuSerah" required>
+
+            <label for="supervisorSerah">Supervisor:</label>
+            <input type="text" id="supervisorSerah" name="supervisorSerah" required>
+
+            <label for="fotoSerah">Foto Serah Terima:</label>
+            <input type="file" id="fotoSerah" name="fotoSerah" accept="image/*">
+
+            <button type="submit">Kirim Serah Terima</button>
+            <button type="button" onclick="batalSerah()">Batal</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- HALAMAN PENYISIRAN -->
+      <section id="sweeping" class="page">
+        <h1>Penyisiran</h1>
+        <p>Halaman penyisiran. Konten dapat ditambahkan sesuai kebutuhan.</p>
+      </section>
+
+      <!-- HALAMAN PERSONEL -->
+      <section id="personnel" class="page">
+        <h1>Data Personel Avsec</h1>
+        <p>Halaman data personel. Konten dapat ditambahkan sesuai kebutuhan.</p>
+      </section>
+
+      <!-- HALAMAN SOP -->
+      <section id="Regulation" class="page">
+        <h1>Regulasi</h1>
+        <p>Daftar Regulasi dan dokumen terkait dapat ditampilkan di sini.</p>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
