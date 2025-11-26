@@ -18,13 +18,21 @@ import {
   signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+// 🔥 IMPORT STORAGE (UNTUK SIMPAN FOTO PERMANEN)
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
 // === KONFIGURASI FIREBASE (PUNYA KAMU) ===
 const firebaseConfig = {
   apiKey: "AIzaSyDaZgJs2CnoRoZ0YkeBpGnrbcQiTJFf0pA",
   authDomain: "avsecpnk.firebaseapp.com",
   projectId: "avsecpnk",
-  // catatan: biasanya storageBucket = "avsecpnk.appspot.com"
-  storageBucket: "avsecpnk.firebasestorage.app",
+  // Saran: pakai bucket default ini (cek di Firebase console kalau mau yakin)
+  storageBucket: "avsecpnk.appspot.com",
   messagingSenderId: "426515134862",
   appId: "1:426515134862:web:466729d66540376a9bccdf",
   measurementId: "G-K2GNG50ZYZ"
@@ -33,6 +41,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const storage = getStorage(app);
 
 let currentUser = null;
 
@@ -86,7 +95,6 @@ async function handleLoginSubmit(e) {
 
     const cred = await signInWithEmailAndPassword(auth, email, password);
     console.log("Login sukses:", cred.user);
-    // Tidak perlu panggil showPage di sini, akan di-handle onAuthStateChanged
     e.target.reset();
   } catch (err) {
     console.error("Login gagal:", err);
@@ -117,8 +125,13 @@ async function handleLostFormSubmit(e) {
 
   const fotoInput = document.getElementById("fotoBarang");
   let fotoURL = "";
+
+  // 🔥 Upload foto ke Firebase Storage dan simpan URL permanen
   if (fotoInput && fotoInput.files && fotoInput.files[0]) {
-    fotoURL = URL.createObjectURL(fotoInput.files[0]);
+    const file = fotoInput.files[0];
+    const fileRef = ref(storage, `barang/${Date.now()}_${file.name}`);
+    await uploadBytes(fileRef, file);
+    fotoURL = await getDownloadURL(fileRef);
   }
 
   await addDoc(collection(db, "barang"), {
@@ -127,7 +140,7 @@ async function handleLostFormSubmit(e) {
     supervisor,
     namaBarang,
     spesifikasi,
-    fotoURL,          // hanya untuk sesi ini, bukan file asli
+    fotoURL,          // sekarang URL HTTPS permanen dari Storage
     status: "Diamankan",
     waktuSerah: "",
     supervisorSerah: "",
@@ -211,8 +224,13 @@ async function handleSerahFormSubmit(e) {
 
   const fotoInput = document.getElementById("fotoSerah");
   let fotoSerah = "";
+
+  // 🔥 Upload foto serah ke Storage dan simpan URL permanen
   if (fotoInput && fotoInput.files && fotoInput.files[0]) {
-    fotoSerah = URL.createObjectURL(fotoInput.files[0]);
+    const file = fotoInput.files[0];
+    const fileRef = ref(storage, `barang-serah/${Date.now()}_${file.name}`);
+    await uploadBytes(fileRef, file);
+    fotoSerah = await getDownloadURL(fileRef);
   }
 
   await updateDoc(doc(db, "barang", selectedBarangId), {
