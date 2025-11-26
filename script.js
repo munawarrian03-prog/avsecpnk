@@ -1,10 +1,16 @@
-// === FIREBASE MODULE IMPORT ===
+// === IMPORT FIREBASE (WAJIB type="module" di HTML) ===
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { 
-  getFirestore, collection, addDoc, getDocs, updateDoc, doc, serverTimestamp 
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  updateDoc,
+  doc,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// === MASUKKAN CONFIG FIREBASE KAMU DI SINI ===
+// === KONFIGURASI FIREBASE (ISI DENGAN PUNYAMU) ===
 const firebaseConfig = {
   apiKey: "AIzaSyDaZgJs2CnoRoZ0YkeBpGnrbcQiTJFf0pA",
   authDomain: "avsecpnk.firebaseapp.com",
@@ -18,11 +24,41 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// ====== DATA DARI FIREBASE ======
+// ====== NAVIGASI HALAMAN ======
+function showPage(pageId) {
+  document.querySelectorAll(".page").forEach(page => {
+    page.classList.remove("active");
+  });
+
+  const target = document.getElementById(pageId);
+  if (target) {
+    target.classList.add("active");
+  }
+}
+
+// ====== TAMPILKAN/SEMBUNYIKAN SIDEBAR ======
+function toggleSidebar() {
+  const sidebar = document.querySelector(".sidebar");
+  const container = document.querySelector(".container");
+
+  if (!sidebar || !container) return;
+
+  const isCollapsed = container.classList.toggle("sidebar-collapsed");
+  sidebar.classList.toggle("hidden-sidebar", isCollapsed);
+}
+
+// ====== TAMPILKAN/SEMBUNYIKAN FORM "DIAMANKAN" ======
+function toggleDiamankan() {
+  const box = document.getElementById("diamankanSection");
+  if (!box) return;
+  box.classList.toggle("hidden");
+}
+
+// ====== DATA LOKAL (CACHE DARI FIRESTORE) ======
 let dataBarang = [];
 let selectedBarangId = null;
 
-// ====== SIMPAN BARANG DIAMANKAN ======
+// ====== HANDLER FORM BARANG DIAMANKAN ======
 async function handleLostFormSubmit(e) {
   e.preventDefault();
 
@@ -32,13 +68,25 @@ async function handleLostFormSubmit(e) {
   const namaBarang = document.getElementById("namaBarang").value;
   const spesifikasi = document.getElementById("spesifikasi").value;
 
-  const docRef = await addDoc(collection(db, "barang"), {
+  // NOTE: foto pakai URL.createObjectURL TIDAK permanen antar refresh.
+  // Kalau mau beneran simpan foto, nanti pakai Firebase Storage.
+  const fotoInput = document.getElementById("fotoBarang");
+  let fotoURL = "";
+  if (fotoInput && fotoInput.files && fotoInput.files[0]) {
+    fotoURL = URL.createObjectURL(fotoInput.files[0]);
+  }
+
+  await addDoc(collection(db, "barang"), {
     waktuDiamankan,
     shift,
     supervisor,
     namaBarang,
     spesifikasi,
+    fotoURL,          // hanya untuk sesi ini, bukan file asli
     status: "Diamankan",
+    waktuSerah: "",
+    supervisorSerah: "",
+    fotoSerah: "",
     createdAt: serverTimestamp()
   });
 
@@ -46,7 +94,69 @@ async function handleLostFormSubmit(e) {
   muatData();
 }
 
-// ====== UPDATE SERAHTERIMA ======
+// ====== TAMPILKAN DATA KE TABEL ======
+function tampilkanData(filteredData = dataBarang) {
+  const tbody = document.querySelector("#tabelBarang tbody");
+  if (!tbody) return;
+
+  tbody.innerHTML = "";
+
+  filteredData.forEach((barang) => {
+    const tr = document.createElement("tr");
+    const tglTeks = barang.waktuDiamankan
+      ? barang.waktuDiamankan.split("T").join(" ")
+      : "";
+
+    tr.innerHTML = `
+      <td>${tglTeks}</td>
+      <td>${barang.shift || ""}</td>
+      <td>${barang.namaBarang || ""}</td>
+      <td>${barang.status || ""}</td>
+      <td>
+        ${barang.status === "Diamankan"
+          ? `<button type="button" onclick="bukaSerahTerima('${barang.id}')">Serah Terima</button>`
+          : ""
+        }
+        <button type="button" onclick="viewDetail('${barang.id}')">View</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ====== FILTER DATA BERDASARKAN TANGGAL & SHIFT ======
+function filterData() {
+  const tgl = document.getElementById("filterTanggal")?.value || "";
+  const shift = document.getElementById("filterShift")?.value || "";
+
+  const hasil = dataBarang.filter(item => {
+    const cocokTanggal = tgl
+      ? (item.waktuDiamankan || "").startsWith(tgl)
+      : true;
+    const cocokShift = shift ? item.shift === shift : true;
+    return cocokTanggal && cocokShift;
+  });
+
+  tampilkanData(hasil);
+}
+
+// ====== FORM SERAHTERIMA ======
+function bukaSerahTerima(id) {
+  selectedBarangId = id;
+  const box = document.getElementById("serahTerimaBox");
+  if (box) {
+    box.classList.remove("hidden");
+  }
+}
+
+function batalSerah() {
+  const box = document.getElementById("serahTerimaBox");
+  if (box) {
+    box.classList.add("hidden");
+  }
+  selectedBarangId = null;
+}
+
 async function handleSerahFormSubmit(e) {
   e.preventDefault();
   if (!selectedBarangId) return;
@@ -54,64 +164,26 @@ async function handleSerahFormSubmit(e) {
   const waktuSerah = document.getElementById("waktuSerah").value;
   const supervisorSerah = document.getElementById("supervisorSerah").value;
 
+  const fotoInput = document.getElementById("fotoSerah");
+  let fotoSerah = "";
+  if (fotoInput && fotoInput.files && fotoInput.files[0]) {
+    fotoSerah = URL.createObjectURL(fotoInput.files[0]);
+  }
+
   await updateDoc(doc(db, "barang", selectedBarangId), {
     waktuSerah,
     supervisorSerah,
+    fotoSerah,
     status: "Diserahkan"
   });
 
-  selectedBarangId = null;
-  document.getElementById("serahTerimaBox")?.classList.add("hidden");
-
-  e.target.reset();
-  muatData();
-}
-
-// ====== TAMPILKAN DATA TABEL ======
-function tampilkanData(list = dataBarang) {
-  const tbody = document.querySelector("#tabelBarang tbody");
-  if (!tbody) return;
-
-  tbody.innerHTML = "";
-
-  list.forEach((b, index) => {
-    const tr = document.createElement("tr");
-
-    tr.innerHTML = `
-      <td>${b.waktuDiamankan || "-"}</td>
-      <td>${b.shift || "-"}</td>
-      <td>${b.namaBarang || "-"}</td>
-      <td>${b.status || "-"}</td>
-      <td>
-        ${b.status === "Diamankan"
-          ? `<button onclick="bukaSerahTerima('${b.id}')">Serah Terima</button>`
-          : ""
-        }
-        <button onclick="viewDetail('${b.id}')">View</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-// ====== MUAT DATA DARI FIREBASE ======
-async function muatData() {
-  const snap = await getDocs(collection(db, "barang"));
-  dataBarang = snap.docs.map(docx => ({
-    id: docx.id,
-    ...docx.data()
-  }));
-
   tampilkanData();
+  batalSerah();
+  e.target.reset();
 }
 
-// ====== VIEW & SERAH ======
-window.bukaSerahTerima = function(id) {
-  selectedBarangId = id;
-  document.getElementById("serahTerimaBox")?.classList.remove("hidden");
-};
-
-window.viewDetail = function(id) {
+// ====== VIEW DETAIL BARANG ======
+function viewDetail(id) {
   const b = dataBarang.find(x => x.id === id);
   if (!b) return;
 
@@ -120,25 +192,65 @@ window.viewDetail = function(id) {
 
   modal.innerHTML = `
     <div class="modal-box">
-      <h2>Detail Barang</h2>
-      <p><b>Tanggal Diamankan:</b> ${b.waktuDiamankan || "-"}</p>
+      <h2>Detail Barang Diamankan</h2>
+      <p><b>Tanggal & Waktu Diamankan:</b> ${b.waktuDiamankan || "-"}</p>
       <p><b>Shift:</b> ${b.shift || "-"}</p>
+      <p><b>Supervisor:</b> ${b.supervisor || "-"}</p>
       <p><b>Nama Barang:</b> ${b.namaBarang || "-"}</p>
+      <p><b>Spesifikasi Barang:</b> ${b.spesifikasi || "-"}</p>
+      <p><b>Foto Barang:</b><br>${b.fotoURL ? `<img src="${b.fotoURL}" width="200">` : "-"}</p>
       <p><b>Status:</b> ${b.status || "-"}</p>
-      <button onclick="this.closest('.modal-overlay').remove()">Tutup</button>
+      ${b.status === "Diserahkan" ? `
+        <hr>
+        <p><b>Tanggal & Waktu Serah:</b> ${b.waktuSerah || "-"}</p>
+        <p><b>Supervisor Serah:</b> ${b.supervisorSerah || "-"}</p>
+        <p><b>Foto Serah:</b><br>${b.fotoSerah ? `<img src="${b.fotoSerah}" width="200">` : "-"}</p>
+      ` : ""}
+      <button type="button" onclick="this.closest('.modal-overlay').remove()">Tutup</button>
     </div>
   `;
   document.body.appendChild(modal);
-};
+}
 
-// ====== INIT ======
+// ====== MUAT DATA DARI FIRESTORE ======
+async function muatData() {
+  try {
+    const res = await getDocs(collection(db, "barang"));
+    dataBarang = res.docs.map(d => ({
+      id: d.id,
+      ...d.data()
+    }));
+    tampilkanData();
+  } catch (err) {
+    console.error("Gagal memuat data:", err);
+  }
+}
+
+// ====== INIT SETELAH HALAMAN SIAP ======
 window.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("lostForm")?.addEventListener("submit", handleLostFormSubmit);
-  document.getElementById("serahForm")?.addEventListener("submit", handleSerahFormSubmit);
+  const lostForm = document.getElementById("lostForm");
+  if (lostForm) {
+    lostForm.addEventListener("submit", handleLostFormSubmit);
+  }
+
+  const serahForm = document.getElementById("serahForm");
+  if (serahForm) {
+    serahForm.addEventListener("submit", handleSerahFormSubmit);
+  }
+
+  // sembunyikan sidebar otomatis di layar kecil
+  const sidebar = document.querySelector(".sidebar");
+  const container = document.querySelector(".container");
+
+  if (window.innerWidth <= 768 && sidebar && container) {
+    sidebar.classList.add("hidden-sidebar");
+    container.classList.add("sidebar-collapsed");
+  }
+
   muatData();
 });
 
-// ✅ expose fungsi ke global supaya onclick di HTML tetap jalan
+// ====== EXPOSE FUNGSI KE GLOBAL UNTUK onClick DI HTML ======
 window.showPage = showPage;
 window.toggleSidebar = toggleSidebar;
 window.toggleDiamankan = toggleDiamankan;
@@ -146,4 +258,3 @@ window.filterData = filterData;
 window.bukaSerahTerima = bukaSerahTerima;
 window.batalSerah = batalSerah;
 window.viewDetail = viewDetail;
-
