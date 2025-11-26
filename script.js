@@ -6,12 +6,13 @@ import {
 
 // === MASUKKAN CONFIG FIREBASE KAMU DI SINI ===
 const firebaseConfig = {
-  apiKey: "API_KEY_KAMU",
-  authDomain: "PROJECT_ID.firebaseapp.com",
-  projectId: "PROJECT_ID",
-  storageBucket: "PROJECT_ID.appspot.com",
-  messagingSenderId: "XXXX",
-  appId: "XXXX"
+  apiKey: "AIzaSyDaZgJs2CnoRoZ0YkeBpGnrbcQiTJFf0pA",
+  authDomain: "avsecpnk.firebaseapp.com",
+  projectId: "avsecpnk",
+  storageBucket: "avsecpnk.firebasestorage.app",
+  messagingSenderId: "426515134862",
+  appId: "1:426515134862:web:466729d66540376a9bccdf",
+  measurementId: "G-K2GNG50ZYZ"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -136,3 +137,4 @@ window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("serahForm")?.addEventListener("submit", handleSerahFormSubmit);
   muatData();
 });
+
