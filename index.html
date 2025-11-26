@@ -51,6 +51,11 @@
           <span class="menu-text">Regulasi</span>
         </li>
       </ul>
+
+      <!-- Tombol Logout -->
+      <button id="btnLogout" type="button" class="btn-logout hidden">
+        Logout
+      </button>
     </aside>
 
     <!-- MAIN CONTENT -->
@@ -58,8 +63,27 @@
       <!-- Tombol buka sidebar (muncul saat sidebar tertutup) -->
       <button class="btn-toggle-sidebar-open" type="button" onclick="toggleSidebar()">☰</button>
 
+      <!-- PROFIL USER (AKAN DIISI VIA JS SAAT LOGIN) -->
+      <div id="profileBox" class="profile-box hidden">
+        <h3>Profil Akun</h3>
+        <p><strong>Email:</strong> <span id="profileEmail">-</span></p>
+        <!-- Opsional: kalau nanti mau tambahkan displayName -->
+        <p><strong>Nama:</strong> <span id="profileName">-</span></p>
+      </div>
+
+      <!-- HALAMAN LOGIN -->
+      <section id="Login" class="page active">
+        <h1>Login Developer</h1>
+        <form id="loginForm">
+          <input type="email" id="loginEmail" placeholder="Email" required>
+          <input type="password" id="loginPassword" placeholder="Password" required>
+          <button type="submit">Login</button>
+        </form>
+        <p id="loginError" style="color:red; font-size:12px;"></p>
+      </section>
+
       <!-- DASHBOARD -->
-      <section id="home" class="page active">
+      <section id="home" class="page">
         <h1>Selamat Datang di Portal Airport Security Supadio</h1>
         <p>Website internal untuk manajemen keamanan dan pelaporan di Bandara Supadio.</p>
       </section>
@@ -180,16 +204,6 @@
       <section id="Regulation" class="page">
         <h1>Regulasi</h1>
         <p>Daftar Regulasi dan dokumen terkait dapat ditampilkan di sini.</p>
-      </section>
-
-      <!-- TABEL BARANG (DIAMANKAN) -->
-      <section id="Barang" class="page">
-        <h1>Data Barang</h1>
-        <table id="tabelBarang">
-          <tbody>
-            <!-- data akan diisi via JavaScript -->
-          </tbody>
-        </table>
       </section>
 
     </main>
