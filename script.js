@@ -138,3 +138,12 @@ window.addEventListener("DOMContentLoaded", () => {
   muatData();
 });
 
+// ✅ expose fungsi ke global supaya onclick di HTML tetap jalan
+window.showPage = showPage;
+window.toggleSidebar = toggleSidebar;
+window.toggleDiamankan = toggleDiamankan;
+window.filterData = filterData;
+window.bukaSerahTerima = bukaSerahTerima;
+window.batalSerah = batalSerah;
+window.viewDetail = viewDetail;
+
