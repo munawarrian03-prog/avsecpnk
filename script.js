@@ -10,11 +10,20 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// === KONFIGURASI FIREBASE (ISI DENGAN PUNYAMU) ===
+// 🔥 IMPORT AUTH
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+// === KONFIGURASI FIREBASE (PUNYA KAMU) ===
 const firebaseConfig = {
   apiKey: "AIzaSyDaZgJs2CnoRoZ0YkeBpGnrbcQiTJFf0pA",
   authDomain: "avsecpnk.firebaseapp.com",
   projectId: "avsecpnk",
+  // catatan: biasanya storageBucket = "avsecpnk.appspot.com"
   storageBucket: "avsecpnk.firebasestorage.app",
   messagingSenderId: "426515134862",
   appId: "1:426515134862:web:466729d66540376a9bccdf",
@@ -23,6 +32,9 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+
+let currentUser = null;
 
 // ====== NAVIGASI HALAMAN ======
 function showPage(pageId) {
@@ -58,6 +70,41 @@ function toggleDiamankan() {
 let dataBarang = [];
 let selectedBarangId = null;
 
+// ====== LOGIN / LOGOUT ======
+async function handleLoginSubmit(e) {
+  e.preventDefault();
+  const emailInput = document.getElementById("loginEmail");
+  const passInput  = document.getElementById("loginPassword");
+  const errorBox   = document.getElementById("loginError");
+
+  if (!emailInput || !passInput) return;
+  if (errorBox) errorBox.textContent = "";
+
+  try {
+    const email = emailInput.value;
+    const password = passInput.value;
+
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    console.log("Login sukses:", cred.user);
+    // Tidak perlu panggil showPage di sini, akan di-handle onAuthStateChanged
+    e.target.reset();
+  } catch (err) {
+    console.error("Login gagal:", err);
+    if (errorBox) {
+      errorBox.textContent = "Login gagal: " + (err.code || "cek email/password");
+    }
+  }
+}
+
+async function handleLogout() {
+  try {
+    await signOut(auth);
+    console.log("Logout sukses");
+  } catch (err) {
+    console.error("Logout gagal:", err);
+  }
+}
+
 // ====== HANDLER FORM BARANG DIAMANKAN ======
 async function handleLostFormSubmit(e) {
   e.preventDefault();
@@ -68,8 +115,6 @@ async function handleLostFormSubmit(e) {
   const namaBarang = document.getElementById("namaBarang").value;
   const spesifikasi = document.getElementById("spesifikasi").value;
 
-  // NOTE: foto pakai URL.createObjectURL TIDAK permanen antar refresh.
-  // Kalau mau beneran simpan foto, nanti pakai Firebase Storage.
   const fotoInput = document.getElementById("fotoBarang");
   let fotoURL = "";
   if (fotoInput && fotoInput.files && fotoInput.files[0]) {
@@ -228,14 +273,28 @@ async function muatData() {
 
 // ====== INIT SETELAH HALAMAN SIAP ======
 window.addEventListener("DOMContentLoaded", () => {
-  const lostForm = document.getElementById("lostForm");
+  const lostForm    = document.getElementById("lostForm");
+  const serahForm   = document.getElementById("serahForm");
+  const loginForm   = document.getElementById("loginForm");
+  const btnLogout   = document.getElementById("btnLogout");
+  const profileBox  = document.getElementById("profileBox");
+  const profileEmail = document.getElementById("profileEmail");
+  const profileName  = document.getElementById("profileName");
+
   if (lostForm) {
     lostForm.addEventListener("submit", handleLostFormSubmit);
   }
 
-  const serahForm = document.getElementById("serahForm");
   if (serahForm) {
     serahForm.addEventListener("submit", handleSerahFormSubmit);
+  }
+
+  if (loginForm) {
+    loginForm.addEventListener("submit", handleLoginSubmit);
+  }
+
+  if (btnLogout) {
+    btnLogout.addEventListener("click", handleLogout);
   }
 
   // sembunyikan sidebar otomatis di layar kecil
@@ -247,7 +306,31 @@ window.addEventListener("DOMContentLoaded", () => {
     container.classList.add("sidebar-collapsed");
   }
 
-  muatData();
+  // 🔥 Pantau status login
+  onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+
+    if (user) {
+      console.log("User login:", user.email);
+
+      if (btnLogout) btnLogout.classList.remove("hidden");
+      if (profileBox) profileBox.classList.remove("hidden");
+      if (profileEmail) profileEmail.textContent = user.email || "-";
+      if (profileName) profileName.textContent  = user.displayName || "-";
+
+      // setelah login, arahkan ke dashboard/home
+      showPage("home");
+      muatData();
+    } else {
+      console.log("Belum login / sudah logout");
+
+      if (btnLogout) btnLogout.classList.add("hidden");
+      if (profileBox) profileBox.classList.add("hidden");
+
+      // paksa ke halaman login
+      showPage("Login");
+    }
+  });
 });
 
 // ====== EXPOSE FUNGSI KE GLOBAL UNTUK onClick DI HTML ======
