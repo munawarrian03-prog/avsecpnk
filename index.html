@@ -63,11 +63,10 @@
       <!-- Tombol buka sidebar (muncul saat sidebar tertutup) -->
       <button class="btn-toggle-sidebar-open" type="button" onclick="toggleSidebar()">☰</button>
 
-      <!-- PROFIL USER (AKAN DIISI VIA JS SAAT LOGIN) -->
+      <!-- PROFIL USER -->
       <div id="profileBox" class="profile-box hidden">
         <h3>Profil Akun</h3>
         <p><strong>Email:</strong> <span id="profileEmail">-</span></p>
-        <!-- Opsional: kalau nanti mau tambahkan displayName -->
         <p><strong>Nama:</strong> <span id="profileName">-</span></p>
       </div>
 
@@ -98,10 +97,10 @@
           <span class="menu-desc">Input Data Barang Yang Diamankan</span>
         </div>
 
-        <!-- FORM BARANG DIAMANKAN (disembunyikan dulu) -->
+        <!-- FORM BARANG DIAMANKAN -->
         <div id="diamankanSection" class="hidden">
           <form id="lostForm">
-            <label for="waktuDiamankan">Tanggal &amp; Waktu Diamankan:</label>
+            <label for="waktuDiamankan">Tanggal & Waktu Diamankan:</label>
             <input type="datetime-local" id="waktuDiamankan" name="waktuDiamankan" required>
 
             <label for="shift">Shift:</label>
@@ -120,7 +119,7 @@
             <input type="text" id="namaBarang" name="namaBarang" required>
 
             <label for="spesifikasi">Spesifikasi Barang:</label>
-            <textarea id="spesifikasi" name="spesifikasi" placeholder="Contoh: warna, merek, ciri khas" required></textarea>
+            <textarea id="spesifikasi" name="spesifikasi" required></textarea>
 
             <label for="fotoBarang">Foto Barang:</label>
             <input type="file" id="fotoBarang" name="fotoBarang" accept="image/*">
@@ -131,7 +130,7 @@
 
         <hr>
 
-        <!-- CARI BARANG DIAMANKAN -->
+        <!-- FILTER -->
         <div class="filter-box">
           <h3>Cari Barang Diamankan</h3>
 
@@ -153,7 +152,7 @@
           <button type="button" onclick="filterData()">Filter</button>
         </div>
 
-        <!-- TABEL DATA BARANG DIAMANKAN -->
+        <!-- TABEL -->
         <table id="tabelBarang">
           <thead>
             <tr>
@@ -164,16 +163,14 @@
               <th>Aksi</th>
             </tr>
           </thead>
-          <tbody>
-            <!-- data akan diisi via JavaScript -->
-          </tbody>
+          <tbody></tbody>
         </table>
 
         <!-- FORM SERAHTERIMA -->
         <div id="serahTerimaBox" class="hidden">
           <h3>Form Serah Terima Barang</h3>
           <form id="serahForm">
-            <label for="waktuSerah">Tanggal &amp; Waktu Diserahkan:</label>
+            <label for="waktuSerah">Tanggal & Waktu Diserahkan:</label>
             <input type="datetime-local" id="waktuSerah" name="waktuSerah" required>
 
             <label for="supervisorSerah">Supervisor:</label>
@@ -209,7 +206,7 @@
     </main>
   </div>
 
-  <!-- PANGGIL SCRIPT HANYA SEKALI, SEBAGAI MODULE -->
+  <!-- PANGGIL SCRIPT -->
   <script type="module" src="script.js"></script>
 </body>
 </html>
