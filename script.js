@@ -1,47 +1,11 @@
-// === IMPORT FIREBASE (WAJIB type="module" di HTML) ===
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  getDocs,
-  updateDoc,
-  doc,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+// === SUPABASE CLIENT ===
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// 🔥 IMPORT AUTH
-import {
-  getAuth,
-  signInWithEmailAndPassword,
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+// TODO: ISI DENGAN punyamu sendiri
+const SUPABASE_URL = "https://xxxxx.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
 
-// 🔥 IMPORT STORAGE (UNTUK SIMPAN FOTO PERMANEN)
-import {
-  getStorage,
-  ref,
-  uploadBytes,
-  getDownloadURL
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-
-// === KONFIGURASI FIREBASE (PUNYA KAMU) ===
-const firebaseConfig = {
-  apiKey: "AIzaSyDaZgJs2CnoRoZ0YkeBpGnrbcQiTJFf0pA",
-  authDomain: "avsecpnk.firebaseapp.com",
-  projectId: "avsecpnk",
-  // Saran: pakai bucket default ini (cek di Firebase console kalau mau yakin)
-  storageBucket: "avsecpnk.appspot.com",
-  messagingSenderId: "426515134862",
-  appId: "1:426515134862:web:466729d66540376a9bccdf",
-  measurementId: "G-K2GNG50ZYZ"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-const storage = getStorage(app);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let currentUser = null;
 
@@ -75,16 +39,41 @@ function toggleDiamankan() {
   box.classList.toggle("hidden");
 }
 
-// ====== DATA LOKAL (CACHE DARI FIRESTORE) ======
+// ====== DATA LOKAL (CACHE DARI SUPABASE) ======
 let dataBarang = [];
 let selectedBarangId = null;
 
-// ====== LOGIN / LOGOUT ======
+// ====== HELPER: UPLOAD FOTO KE SUPABASE STORAGE ======
+async function uploadImageToSupabase(file, folder) {
+  if (!file) return "";
+
+  const ext = file.name.split(".").pop();
+  const fileName = `${folder}_${Date.now()}.${ext}`;
+  const filePath = `${folder}/${fileName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("barang") // nama bucket
+    .upload(filePath, file);
+
+  if (uploadError) {
+    console.error("Gagal upload ke Supabase Storage:", uploadError);
+    return "";
+  }
+
+  const { data: publicData } = supabase.storage
+    .from("barang")
+    .getPublicUrl(filePath);
+
+  // v2: data.publicUrl
+  return publicData?.publicUrl || "";
+}
+
+// ====== LOGIN / LOGOUT (SUPABASE AUTH EMAIL/PASSWORD) ======
 async function handleLoginSubmit(e) {
   e.preventDefault();
   const emailInput = document.getElementById("loginEmail");
-  const passInput  = document.getElementById("loginPassword");
-  const errorBox   = document.getElementById("loginError");
+  const passInput = document.getElementById("loginPassword");
+  const errorBox = document.getElementById("loginError");
 
   if (!emailInput || !passInput) return;
   if (errorBox) errorBox.textContent = "";
@@ -93,23 +82,39 @@ async function handleLoginSubmit(e) {
     const email = emailInput.value;
     const password = passInput.value;
 
-    const cred = await signInWithEmailAndPassword(auth, email, password);
-    console.log("Login sukses:", cred.user);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) {
+      console.error("Login gagal:", error);
+      if (errorBox) {
+        errorBox.textContent = "Login gagal: " + (error.message || "cek email/password");
+      }
+      return;
+    }
+
+    console.log("Login sukses:", data.user);
     e.target.reset();
   } catch (err) {
-    console.error("Login gagal:", err);
+    console.error("Login error:", err);
     if (errorBox) {
-      errorBox.textContent = "Login gagal: " + (err.code || "cek email/password");
+      errorBox.textContent = "Terjadi error saat login";
     }
   }
 }
 
 async function handleLogout() {
   try {
-    await signOut(auth);
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("Logout gagal:", error);
+      return;
+    }
     console.log("Logout sukses");
   } catch (err) {
-    console.error("Logout gagal:", err);
+    console.error("Logout error:", err);
   }
 }
 
@@ -126,30 +131,35 @@ async function handleLostFormSubmit(e) {
   const fotoInput = document.getElementById("fotoBarang");
   let fotoURL = "";
 
-  // 🔥 Upload foto ke Firebase Storage dan simpan URL permanen
   if (fotoInput && fotoInput.files && fotoInput.files[0]) {
-    const file = fotoInput.files[0];
-    const fileRef = ref(storage, `barang/${Date.now()}_${file.name}`);
-    await uploadBytes(fileRef, file);
-    fotoURL = await getDownloadURL(fileRef);
+    fotoURL = await uploadImageToSupabase(fotoInput.files[0], "barang");
   }
 
-  await addDoc(collection(db, "barang"), {
-    waktuDiamankan,
-    shift,
-    supervisor,
-    namaBarang,
-    spesifikasi,
-    fotoURL,          // sekarang URL HTTPS permanen dari Storage
-    status: "Diamankan",
-    waktuSerah: "",
-    supervisorSerah: "",
-    fotoSerah: "",
-    createdAt: serverTimestamp()
-  });
+  const { error } = await supabase
+    .from("barang")
+    .insert([
+      {
+        waktu_diamankan: waktuDiamankan, // simpan string datetime-local
+        shift,
+        supervisor,
+        nama_barang: namaBarang,
+        spesifikasi,
+        foto_url: fotoURL,
+        status: "Diamankan",
+        waktu_serah: "",
+        supervisor_serah: "",
+        foto_serah: ""
+        // created_at pakai default di DB
+      }
+    ]);
+
+  if (error) {
+    console.error("Gagal simpan ke Supabase:", error);
+    return;
+  }
 
   e.target.reset();
-  muatData();
+  await muatData();
 }
 
 // ====== TAMPILKAN DATA KE TABEL ======
@@ -160,15 +170,15 @@ function tampilkanData(filteredData = dataBarang) {
   tbody.innerHTML = "";
 
   filteredData.forEach((barang) => {
-    const tr = document.createElement("tr");
-    const tglTeks = barang.waktuDiamankan
-      ? barang.waktuDiamankan.split("T").join(" ")
+    const tglTeks = barang.waktu_diamankan
+      ? barang.waktu_diamankan.split("T").join(" ")
       : "";
 
+    const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${tglTeks}</td>
       <td>${barang.shift || ""}</td>
-      <td>${barang.namaBarang || ""}</td>
+      <td>${barang.nama_barang || ""}</td>
       <td>${barang.status || ""}</td>
       <td>
         ${barang.status === "Diamankan"
@@ -189,7 +199,7 @@ function filterData() {
 
   const hasil = dataBarang.filter(item => {
     const cocokTanggal = tgl
-      ? (item.waktuDiamankan || "").startsWith(tgl)
+      ? (item.waktu_diamankan || "").startsWith(tgl)
       : true;
     const cocokShift = shift ? item.shift === shift : true;
     return cocokTanggal && cocokShift;
@@ -223,31 +233,38 @@ async function handleSerahFormSubmit(e) {
   const supervisorSerah = document.getElementById("supervisorSerah").value;
 
   const fotoInput = document.getElementById("fotoSerah");
-  let fotoSerah = "";
+  let fotoSerahURL = "";
 
-  // 🔥 Upload foto serah ke Storage dan simpan URL permanen
   if (fotoInput && fotoInput.files && fotoInput.files[0]) {
-    const file = fotoInput.files[0];
-    const fileRef = ref(storage, `barang-serah/${Date.now()}_${file.name}`);
-    await uploadBytes(fileRef, file);
-    fotoSerah = await getDownloadURL(fileRef);
+    fotoSerahURL = await uploadImageToSupabase(fotoInput.files[0], "barang-serah");
   }
 
-  await updateDoc(doc(db, "barang", selectedBarangId), {
-    waktuSerah,
-    supervisorSerah,
-    fotoSerah,
-    status: "Diserahkan"
-  });
+  const barangIdNum = Number(selectedBarangId);
 
-  tampilkanData();
+  const { error } = await supabase
+    .from("barang")
+    .update({
+      waktu_serah: waktuSerah,
+      supervisor_serah: supervisorSerah,
+      foto_serah: fotoSerahURL,
+      status: "Diserahkan"
+    })
+    .eq("id", barangIdNum);
+
+  if (error) {
+    console.error("Gagal update serah terima:", error);
+    return;
+  }
+
+  await muatData();
   batalSerah();
   e.target.reset();
 }
 
 // ====== VIEW DETAIL BARANG ======
 function viewDetail(id) {
-  const b = dataBarang.find(x => x.id === id);
+  const barangIdNum = Number(id);
+  const b = dataBarang.find(x => x.id === barangIdNum);
   if (!b) return;
 
   const modal = document.createElement("div");
@@ -256,18 +273,18 @@ function viewDetail(id) {
   modal.innerHTML = `
     <div class="modal-box">
       <h2>Detail Barang Diamankan</h2>
-      <p><b>Tanggal & Waktu Diamankan:</b> ${b.waktuDiamankan || "-"}</p>
+      <p><b>Tanggal & Waktu Diamankan:</b> ${b.waktu_diamankan || "-"}</p>
       <p><b>Shift:</b> ${b.shift || "-"}</p>
       <p><b>Supervisor:</b> ${b.supervisor || "-"}</p>
-      <p><b>Nama Barang:</b> ${b.namaBarang || "-"}</p>
+      <p><b>Nama Barang:</b> ${b.nama_barang || "-"}</p>
       <p><b>Spesifikasi Barang:</b> ${b.spesifikasi || "-"}</p>
-      <p><b>Foto Barang:</b><br>${b.fotoURL ? `<img src="${b.fotoURL}" width="200">` : "-"}</p>
+      <p><b>Foto Barang:</b><br>${b.foto_url ? `<img src="${b.foto_url}" width="200">` : "-"}</p>
       <p><b>Status:</b> ${b.status || "-"}</p>
       ${b.status === "Diserahkan" ? `
         <hr>
-        <p><b>Tanggal & Waktu Serah:</b> ${b.waktuSerah || "-"}</p>
-        <p><b>Supervisor Serah:</b> ${b.supervisorSerah || "-"}</p>
-        <p><b>Foto Serah:</b><br>${b.fotoSerah ? `<img src="${b.fotoSerah}" width="200">` : "-"}</p>
+        <p><b>Tanggal & Waktu Serah:</b> ${b.waktu_serah || "-"}</p>
+        <p><b>Supervisor Serah:</b> ${b.supervisor_serah || "-"}</p>
+        <p><b>Foto Serah:</b><br>${b.foto_serah ? `<img src="${b.foto_serah}" width="200">` : "-"}</p>
       ` : ""}
       <button type="button" onclick="this.closest('.modal-overlay').remove()">Tutup</button>
     </div>
@@ -275,29 +292,61 @@ function viewDetail(id) {
   document.body.appendChild(modal);
 }
 
-// ====== MUAT DATA DARI FIRESTORE ======
+// ====== MUAT DATA DARI SUPABASE ======
 async function muatData() {
   try {
-    const res = await getDocs(collection(db, "barang"));
-    dataBarang = res.docs.map(d => ({
-      id: d.id,
-      ...d.data()
-    }));
+    const { data, error } = await supabase
+      .from("barang")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Gagal memuat data:", error);
+      return;
+    }
+
+    dataBarang = data || [];
     tampilkanData();
   } catch (err) {
-    console.error("Gagal memuat data:", err);
+    console.error("Gagal memuat data (exception):", err);
+  }
+}
+
+// ====== HANDLE PERUBAHAN SESSION AUTH ======
+function handleAuthChange(session) {
+  const btnLogout = document.getElementById("btnLogout");
+  const profileBox = document.getElementById("profileBox");
+  const profileEmail = document.getElementById("profileEmail");
+  const profileName = document.getElementById("profileName");
+
+  currentUser = session?.user || null;
+
+  if (currentUser) {
+    console.log("User login:", currentUser.email);
+
+    if (btnLogout) btnLogout.classList.remove("hidden");
+    if (profileBox) profileBox.classList.remove("hidden");
+    if (profileEmail) profileEmail.textContent = currentUser.email || "-";
+    if (profileName) profileName.textContent =
+      currentUser.user_metadata?.full_name || currentUser.email || "-";
+
+    showPage("home");
+    muatData();
+  } else {
+    console.log("Belum login / sudah logout");
+    if (btnLogout) btnLogout.classList.add("hidden");
+    if (profileBox) profileBox.classList.add("hidden");
+    showPage("Login");
   }
 }
 
 // ====== INIT SETELAH HALAMAN SIAP ======
-window.addEventListener("DOMContentLoaded", () => {
-  const lostForm    = document.getElementById("lostForm");
-  const serahForm   = document.getElementById("serahForm");
-  const loginForm   = document.getElementById("loginForm");
-  const btnLogout   = document.getElementById("btnLogout");
-  const profileBox  = document.getElementById("profileBox");
-  const profileEmail = document.getElementById("profileEmail");
-  const profileName  = document.getElementById("profileName");
+window.addEventListener("DOMContentLoaded", async () => {
+  const lostForm = document.getElementById("lostForm");
+  const serahForm = document.getElementById("serahForm");
+  const loginForm = document.getElementById("loginForm");
+  const btnLogout = document.getElementById("btnLogout");
+  const profileBox = document.getElementById("profileBox");
 
   if (lostForm) {
     lostForm.addEventListener("submit", handleLostFormSubmit);
@@ -324,30 +373,13 @@ window.addEventListener("DOMContentLoaded", () => {
     container.classList.add("sidebar-collapsed");
   }
 
-  // 🔥 Pantau status login
-  onAuthStateChanged(auth, (user) => {
-    currentUser = user;
+  // cek session awal
+  const { data } = await supabase.auth.getSession();
+  handleAuthChange(data.session || null);
 
-    if (user) {
-      console.log("User login:", user.email);
-
-      if (btnLogout) btnLogout.classList.remove("hidden");
-      if (profileBox) profileBox.classList.remove("hidden");
-      if (profileEmail) profileEmail.textContent = user.email || "-";
-      if (profileName) profileName.textContent  = user.displayName || "-";
-
-      // setelah login, arahkan ke dashboard/home
-      showPage("home");
-      muatData();
-    } else {
-      console.log("Belum login / sudah logout");
-
-      if (btnLogout) btnLogout.classList.add("hidden");
-      if (profileBox) profileBox.classList.add("hidden");
-
-      // paksa ke halaman login
-      showPage("Login");
-    }
+  // pantau perubahan auth
+  supabase.auth.onAuthStateChange((_event, session) => {
+    handleAuthChange(session);
   });
 });
 
