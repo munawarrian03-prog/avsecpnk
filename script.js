@@ -5,7 +5,7 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const SUPABASE_URL = "https://falvxitgmkbnomsghzmg.supabase.co";
 // GANTI nilai di bawah dengan anon public key Supabase Anda (atau isi tajuk environment jika Anda punya cara lain)
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhbHZ4aXRnbWtibm9tc2doem1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyMTM2NDIsImV4cCI6MjA3OTc4OTY0Mn0.L4bmyFCHKLi4UmWvaeB2sll6-nQuvVGK1jO5hXkjLUY";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -420,3 +420,4 @@ window.viewDetail = viewDetail;
 window.muatData = muatData;
 window.handleLoginSubmit = handleLoginSubmit;
 window.handleLogout = handleLogout;
+
