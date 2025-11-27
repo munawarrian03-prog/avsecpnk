@@ -9,16 +9,16 @@ body {
   font-family: Arial, sans-serif;
   display: flex;
   min-height: 100vh;
-  background-color: #f1f5f9; /* biar full background abu-abu muda */
+  background-color: #f1f5f9;
 }
 
-/* WRAPPER UTAMA */
+/* ===== WRAPPER UTAMA ===== */
 .container {
   display: flex;
-  flex: 1;              /* isi penuh lebar */
+  flex: 1;
   width: 100%;
-  max-width: none;      /* override kalau ada bootstrap .container */
-  margin: 0;            /* override margin auto bootstrap */
+  max-width: none;
+  margin: 0;
   transition: all 0.3s ease;
 }
 
@@ -33,7 +33,6 @@ body {
   transition: width 0.3s ease, transform 0.3s ease, padding 0.3s ease;
 }
 
-/* HEADER SIDEBAR */
 .sidebar-header {
   display: flex;
   align-items: center;
@@ -51,7 +50,7 @@ body {
   font-size: 12px;
 }
 
-/* MENU SIDEBAR */
+/* ===== MENU SIDEBAR ===== */
 .sidebar-menu {
   list-style: none;
   margin: 20px 0 0;
@@ -81,7 +80,6 @@ body {
   letter-spacing: 1px;
 }
 
-/* Judul kecil di sidebar */
 .menu-title {
   margin-top: 18px;
   margin-bottom: 4px;
@@ -91,19 +89,19 @@ body {
   opacity: 0.9;
 }
 
-/* GESER SIDEBAR KE KIRI */
+/* Geser sidebar keluar */
 .hidden-sidebar {
   transform: translateX(-100%);
 }
 
-/* SAAT CONTAINER PUNYA CLASS sidebar-collapsed */
+/* Collapse sidebar */
 .container.sidebar-collapsed .sidebar {
   width: 0;
   padding: 0;
   overflow: hidden;
 }
 
-/* ===== KONTEN UTAMA ===== */
+/* ===== KONTEN ===== */
 .content {
   flex: 1;
   padding: 20px;
@@ -113,13 +111,12 @@ body {
   transition: margin-left 0.3s ease, width 0.3s ease;
 }
 
-/* SAAT SIDEBAR COLLAPSED, KONTEN FULL */
 .container.sidebar-collapsed .content {
   width: 100%;
   margin-left: 0;
 }
 
-/* ===== TOMBOL GARIS TIGA DI SIDEBAR ===== */
+/* ===== TOMBOL SIDEBAR ===== */
 .btn-toggle-sidebar {
   background: transparent;
   border: none;
@@ -134,12 +131,12 @@ body {
   background-color: rgba(148, 163, 184, 0.4);
 }
 
-/* SAAT SIDEBAR DITUTUP, TOMBOL DI SIDEBAR IKUT MENGHILANG */
+/* Hilang saat sidebar collapse */
 .container.sidebar-collapsed .btn-toggle-sidebar {
   display: none;
 }
 
-/* TOMBOL BUKA SIDEBAR DI KONTEN */
+/* Tombol buka sidebar */
 .btn-toggle-sidebar-open {
   position: fixed;
   top: 10px;
@@ -151,10 +148,9 @@ body {
   background-color: #2563eb;
   color: #fff;
   cursor: pointer;
-  display: none; /* default: tidak tampil */
+  display: none;
 }
 
-/* MUNCULKAN TOMBOL OPEN SAAT SIDEBAR DITUTUP */
 .container.sidebar-collapsed .btn-toggle-sidebar-open {
   display: inline-block;
 }
@@ -163,7 +159,7 @@ body {
   background-color: #1e40af;
 }
 
-/* ===== HALAMAN (PAGE) ===== */
+/* ===== PAGE ===== */
 .page {
   display: none;
 }
@@ -188,7 +184,7 @@ form select {
   border: 1px solid #ccc;
 }
 
-/* TOMBOL UMUM */
+/* ===== TOMBOL ===== */
 button {
   background-color: #2563eb;
   color: white;
@@ -202,7 +198,7 @@ button:hover {
   background-color: #1e40af;
 }
 
-/* FILTER BOX */
+/* ===== FILTER BOX ===== */
 .filter-box {
   background: #eef5ff;
   padding: 10px;
@@ -228,7 +224,7 @@ td {
   text-align: left;
 }
 
-/* MENU DIAMANKAN (LItA) */
+/* ===== SUB MENU LITA ===== */
 .sub-menu-lita {
   display: flex;
   align-items: center;
@@ -246,14 +242,14 @@ td {
   color: #555;
 }
 
-/* ===== MODAL DETAIL BARANG ===== */
+/* ===== MODAL ===== */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -276,13 +272,13 @@ td {
   border: 1px solid #ccc;
 }
 
-/* ===== RESPONSIVE KECIL ===== */
+/* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
   body {
     height: auto;
   }
 
   .content {
-    padding-top: 50px; /* ruang buat tombol ☰ */
+    padding-top: 50px;
   }
 }
