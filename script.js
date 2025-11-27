@@ -4,7 +4,9 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 const SUPABASE_URL = "https://falvxitgmkbnomsghzmg.supabase.co";
+// GANTI nilai di bawah dengan anon public key Supabase Anda (atau isi tajuk environment jika Anda punya cara lain)
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Variabel global
@@ -14,18 +16,20 @@ let currentUser = null;
 
 
 // =====================================================
-// ===============   UPLOAD GAMBAR STORAGE   ============
+// ===============   HELPER: UPLOAD STORAGE  ===========
 // =====================================================
-
+// Paket upload akan menggunakan bucket bernama "barang" (pastikan bucket ini ada di Supabase Storage)
 async function uploadImageToSupabase(file, folder) {
   try {
+    if (!file) return "";
+
     const fileExt = file.name.split(".").pop();
     const fileName = `${folder}-${Date.now()}.${fileExt}`;
     const filePath = `${folder}/${fileName}`;
 
-    // Upload
+    // upload ke bucket 'barang'
     const { error: uploadError } = await supabase.storage
-      .from("uploads")
+      .from("barang")
       .upload(filePath, file);
 
     if (uploadError) {
@@ -33,12 +37,12 @@ async function uploadImageToSupabase(file, folder) {
       return "";
     }
 
-    // Ambil URL public
+    // ambil public url
     const { data: urlData } = supabase.storage
-      .from("uploads")
+      .from("barang")
       .getPublicUrl(filePath);
 
-    return urlData.publicUrl;
+    return urlData?.publicUrl || "";
 
   } catch (err) {
     console.error("Upload error:", err);
@@ -47,69 +51,104 @@ async function uploadImageToSupabase(file, folder) {
 }
 
 
+// =====================================================
+// ===============   NAVIGASI & UI HELPERS  ============
+// =====================================================
+
+function showPage(pageId) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  const target = document.getElementById(pageId);
+  if (target) target.classList.add("active");
+}
+
+function toggleSidebar() {
+  const sidebar = document.querySelector(".sidebar");
+  const container = document.querySelector(".container");
+  if (!sidebar || !container) return;
+
+  const isCollapsed = container.classList.toggle("sidebar-collapsed");
+  sidebar.classList.toggle("hidden-sidebar", isCollapsed);
+}
+
+function toggleDiamankan() {
+  const box = document.getElementById("diamankanSection");
+  if (!box) return;
+  box.classList.toggle("hidden");
+}
+
 
 // =====================================================
-// ===============     LOGIN / LOGOUT     ===============
+// ===============   AUTH: LOGIN / LOGOUT  =============
 // =====================================================
 
 async function handleLoginSubmit(e) {
   e.preventDefault();
-
-  const email = document.getElementById("loginEmail")?.value;
-  const password = document.getElementById("loginPassword")?.value;
+  const emailInput = document.getElementById("loginEmail");
+  const passInput = document.getElementById("loginPassword");
   const errorBox = document.getElementById("loginError");
 
+  if (!emailInput || !passInput) return;
   if (errorBox) errorBox.textContent = "";
 
+  const email = emailInput.value;
+  const password = passInput.value;
+
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      errorBox.textContent = "Login gagal: " + error.message;
+      console.error("Login gagal:", error);
+      if (errorBox) errorBox.textContent = "Login gagal: " + (error.message || "cek email/password");
       return;
     }
 
-    console.log("Login sukses:", data.user);
-    e.target.reset();
+    // sukses -> session listener akan men-trigger UI update
+    emailInput.value = "";
+    passInput.value = "";
 
   } catch (err) {
-    errorBox.textContent = "Terjadi error saat login";
+    console.error("Login error:", err);
+    if (errorBox) errorBox.textContent = "Terjadi error saat login";
+  }
+}
+
+async function handleLogout() {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("Logout gagal:", error);
+      return;
+    }
+    // session listener akan men-trigger UI
+    console.log("Logout sukses");
+  } catch (err) {
+    console.error("Logout error:", err);
   }
 }
 
 
-async function handleLogout() {
-  const { error } = await supabase.auth.signOut();
-  if (error) console.error("Logout gagal:", error);
-}
-
-
-
 // =====================================================
-// ===============  SIMPAN FORM LITA  ==================
+// ===============   LIT A: SIMPAN DATA   =============
 // =====================================================
 
 async function handleLostFormSubmit(e) {
   e.preventDefault();
 
-  const waktuDiamankan = document.getElementById("waktuDiamankan").value;
-  const shift = document.getElementById("shift").value;
-  const supervisor = document.getElementById("supervisor").value;
-  const namaBarang = document.getElementById("namaBarang").value;
-  const spesifikasi = document.getElementById("spesifikasi").value;
+  const waktuDiamankan = document.getElementById("waktuDiamankan")?.value || "";
+  const shift = document.getElementById("shift")?.value || "";
+  const supervisor = document.getElementById("supervisor")?.value || "";
+  const namaBarang = document.getElementById("namaBarang")?.value || "";
+  const spesifikasi = document.getElementById("spesifikasi")?.value || "";
 
   const fotoInput = document.getElementById("fotoBarang");
   let fotoURL = "";
 
-  if (fotoInput?.files[0]) {
+  if (fotoInput && fotoInput.files && fotoInput.files[0]) {
     fotoURL = await uploadImageToSupabase(fotoInput.files[0], "barang");
   }
 
-  const { error } = await supabase.from("barang").insert([
-    {
+  try {
+    const { error } = await supabase.from("barang").insert([{
       waktu_diamankan: waktuDiamankan,
       shift,
       supervisor,
@@ -120,43 +159,47 @@ async function handleLostFormSubmit(e) {
       waktu_serah: "",
       supervisor_serah: "",
       foto_serah: ""
+    }]);
+
+    if (error) {
+      console.error("Gagal simpan ke Supabase:", error);
+      alert("Gagal menyimpan data: " + (error.message || ""));
+      return;
     }
-  ]);
 
-  if (error) {
-    console.error("Gagal simpan:", error);
-    return;
+    e.target.reset();
+    await muatData();
+    alert("Data berhasil disimpan.");
+
+  } catch (err) {
+    console.error("Exception simpan:", err);
+    alert("Terjadi error saat menyimpan data.");
   }
-
-  e.target.reset();
-  await muatData();
 }
 
 
-
 // =====================================================
-// ===============   TAMPILKAN DATA TABEL   ============
+// ===============   TAMPILKAN DATA KE TABEL   ==========
 // =====================================================
 
-function tampilkanData(filtered = dataBarang) {
+function tampilkanData(filteredData = dataBarang) {
   const tbody = document.querySelector("#tabelBarang tbody");
+  if (!tbody) return;
+
   tbody.innerHTML = "";
 
-  filtered.forEach((barang) => {
+  filteredData.forEach((barang) => {
+    const tglTeks = barang.waktu_diamankan ? barang.waktu_diamankan.replace("T", " ") : "";
     const tr = document.createElement("tr");
 
     tr.innerHTML = `
-      <td>${barang.waktu_diamankan?.replace("T", " ") || ""}</td>
-      <td>${barang.shift}</td>
-      <td>${barang.nama_barang}</td>
-      <td>${barang.status}</td>
+      <td>${tglTeks}</td>
+      <td>${barang.shift || ""}</td>
+      <td>${barang.nama_barang || ""}</td>
+      <td>${barang.status || ""}</td>
       <td>
-        ${
-          barang.status === "Diamankan"
-            ? `<button onclick="bukaSerahTerima('${barang.id}')">Serah Terima</button>`
-            : ""
-        }
-        <button onclick="viewDetail('${barang.id}')">View</button>
+        ${barang.status === "Diamankan" ? `<button type="button" onclick="bukaSerahTerima('${barang.id}')">Serah Terima</button>` : ""}
+        <button type="button" onclick="viewDetail('${barang.id}')">View</button>
       </td>
     `;
 
@@ -165,17 +208,16 @@ function tampilkanData(filtered = dataBarang) {
 }
 
 
-
 // =====================================================
-// ===============       FILTER DATA        ============
+// ===============   FILTER DATA (UI)   ================
 // =====================================================
 
 function filterData() {
-  const tgl = document.getElementById("filterTanggal")?.value;
-  const shift = document.getElementById("filterShift")?.value;
+  const tgl = document.getElementById("filterTanggal")?.value || "";
+  const shift = document.getElementById("filterShift")?.value || "";
 
-  const hasil = dataBarang.filter((item) => {
-    const cocokTanggal = tgl ? item.waktu_diamankan.startsWith(tgl) : true;
+  const hasil = dataBarang.filter(item => {
+    const cocokTanggal = tgl ? (item.waktu_diamankan || "").startsWith(tgl) : true;
     const cocokShift = shift ? item.shift === shift : true;
     return cocokTanggal && cocokShift;
   });
@@ -184,66 +226,71 @@ function filterData() {
 }
 
 
-
 // =====================================================
-// ===============  SERAHTERIMA BARANG     ============
+// ===============   SERAHTERIMA HANDLER   ==============
 // =====================================================
 
 function bukaSerahTerima(id) {
   selectedBarangId = id;
-  document.getElementById("serahTerimaBox")?.classList.remove("hidden");
+  const box = document.getElementById("serahTerimaBox");
+  if (box) box.classList.remove("hidden");
 }
 
 function batalSerah() {
-  document.getElementById("serahTerimaBox")?.classList.add("hidden");
+  const box = document.getElementById("serahTerimaBox");
+  if (box) box.classList.add("hidden");
   selectedBarangId = null;
 }
 
 async function handleSerahFormSubmit(e) {
   e.preventDefault();
-  if (!selectedBarangId) return;
+  if (!selectedBarangId) {
+    alert("Pilih barang terlebih dahulu.");
+    return;
+  }
 
-  const waktuSerah = document.getElementById("waktuSerah").value;
-  const supervisorSerah = document.getElementById("supervisorSerah").value;
+  const waktuSerah = document.getElementById("waktuSerah")?.value || "";
+  const supervisorSerah = document.getElementById("supervisorSerah")?.value || "";
 
   const fotoInput = document.getElementById("fotoSerah");
   let fotoSerahURL = "";
-
-  if (fotoInput?.files[0]) {
-    fotoSerahURL = await uploadImageToSupabase(
-      fotoInput.files[0],
-      "barang-serah"
-    );
+  if (fotoInput && fotoInput.files && fotoInput.files[0]) {
+    fotoSerahURL = await uploadImageToSupabase(fotoInput.files[0], "barang-serah");
   }
 
-  const { error } = await supabase
-    .from("barang")
-    .update({
+  try {
+    const { error } = await supabase.from("barang").update({
       waktu_serah: waktuSerah,
       supervisor_serah: supervisorSerah,
       foto_serah: fotoSerahURL,
       status: "Diserahkan"
-    })
-    .eq("id", Number(selectedBarangId));
+    }).eq("id", Number(selectedBarangId));
 
-  if (error) {
-    console.error("Gagal update:", error);
-    return;
+    if (error) {
+      console.error("Gagal update serah terima:", error);
+      alert("Gagal mengirim serah terima: " + (error.message || ""));
+      return;
+    }
+
+    await muatData();
+    batalSerah();
+    e.target.reset();
+    alert("Serah terima berhasil disimpan.");
+
+  } catch (err) {
+    console.error("Exception serah terima:", err);
+    alert("Terjadi error saat serah terima.");
   }
-
-  await muatData();
-  batalSerah();
-  e.target.reset();
 }
 
 
-
 // =====================================================
-// ===============       VIEW DETAIL        ============
+// ===============   VIEW DETAIL (MODAL)  ==============
 // =====================================================
 
 function viewDetail(id) {
-  const b = dataBarang.find((x) => x.id === Number(id));
+  const barangIdNum = Number(id);
+  const b = dataBarang.find(x => x.id === barangIdNum);
   if (!b) return;
 
   const modal = document.createElement("div");
@@ -251,35 +298,21 @@ function viewDetail(id) {
 
   modal.innerHTML = `
     <div class="modal-box">
-      <h2>Detail Barang</h2>
-
-      <p><b>Tanggal Diamankan:</b> ${b.waktu_diamankan}</p>
-      <p><b>Shift:</b> ${b.shift}</p>
-      <p><b>Supervisor:</b> ${b.supervisor}</p>
-      <p><b>Nama Barang:</b> ${b.nama_barang}</p>
-      <p><b>Spesifikasi:</b> ${b.spesifikasi}</p>
-      <p><b>Foto Barang:</b><br>
-        ${b.foto_url ? `<img src="${b.foto_url}" width="200">` : "-"}
-      </p>
-
-      ${
-        b.status === "Diserahkan"
-          ? `
-              <hr>
-              <p><b>Waktu Serah:</b> ${b.waktu_serah}</p>
-              <p><b>Supervisor Serah:</b> ${b.supervisor_serah}</p>
-              <p><b>Foto Serah:</b><br>
-                ${
-                  b.foto_serah
-                    ? `<img src="${b.foto_serah}" width="200">`
-                    : "-"
-                }
-              </p>
-            `
-          : ""
-      }
-
-      <button onclick="this.closest('.modal-overlay').remove()">Tutup</button>
+      <h2>Detail Barang Diamankan</h2>
+      <p><b>Tanggal & Waktu Diamankan:</b> ${b.waktu_diamankan || "-"}</p>
+      <p><b>Shift:</b> ${b.shift || "-"}</p>
+      <p><b>Supervisor:</b> ${b.supervisor || "-"}</p>
+      <p><b>Nama Barang:</b> ${b.nama_barang || "-"}</p>
+      <p><b>Spesifikasi Barang:</b> ${b.spesifikasi || "-"}</p>
+      <p><b>Foto Barang:</b><br>${b.foto_url ? `<img src="${b.foto_url}" width="200">` : "-"}</p>
+      <p><b>Status:</b> ${b.status || "-"}</p>
+      ${b.status === "Diserahkan" ? `
+        <hr>
+        <p><b>Tanggal & Waktu Serah:</b> ${b.waktu_serah || "-"}</p>
+        <p><b>Supervisor Serah:</b> ${b.supervisor_serah || "-"}</p>
+        <p><b>Foto Serah:</b><br>${b.foto_serah ? `<img src="${b.foto_serah}" width="200">` : "-"}</p>
+      ` : ""}
+      <button type="button" onclick="this.closest('.modal-overlay').remove()">Tutup</button>
     </div>
   `;
 
@@ -287,27 +320,35 @@ function viewDetail(id) {
 }
 
 
-
 // =====================================================
-// ===============      MUAT DATA          ============
+// ===============   MUAT DATA DARI SUPABASE   =========
 // =====================================================
 
 async function muatData() {
-  const { data, error } = await supabase
-    .from("barang")
-    .select("*")
-    .order("created_at", { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from("barang")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-  if (!error) {
+    if (error) {
+      console.error("Gagal memuat data:", error);
+      dataBarang = [];
+      tampilkanData();
+      return;
+    }
+
     dataBarang = data || [];
     tampilkanData();
+
+  } catch (err) {
+    console.error("Gagal memuat data (exception):", err);
   }
 }
 
 
-
 // =====================================================
-// ===============     AUTH SESSION        ============
+// ===============   AUTH SESSION HANDLER   ===========
 // =====================================================
 
 function handleAuthChange(session) {
@@ -319,62 +360,63 @@ function handleAuthChange(session) {
   const nameBox = document.getElementById("profileName");
 
   if (currentUser) {
-    // Show elements
-    btnLogout?.classList.remove("hidden");
-    profileBox?.classList.remove("hidden");
-
-    emailBox.textContent = currentUser.email;
-    nameBox.textContent =
-      currentUser.user_metadata?.full_name || currentUser.email;
+    if (btnLogout) btnLogout.classList.remove("hidden");
+    if (profileBox) profileBox.classList.remove("hidden");
+    if (emailBox) emailBox.textContent = currentUser.email || "-";
+    if (nameBox) nameBox.textContent = currentUser.user_metadata?.full_name || currentUser.email || "-";
 
     showPage("home");
     muatData();
 
   } else {
-    btnLogout?.classList.add("hidden");
-    profileBox?.classList.add("hidden");
+    if (btnLogout) btnLogout.classList.add("hidden");
+    if (profileBox) profileBox.classList.add("hidden");
 
     showPage("Login");
   }
 }
 
 
-
 // =====================================================
-// ===============   SAAT PAGE DIBUKA      ============
+// ===============   INIT: EVENT LISTENERS   ==========
 // =====================================================
 
 window.addEventListener("DOMContentLoaded", async () => {
+  // bind forms if exist
   document.getElementById("lostForm")?.addEventListener("submit", handleLostFormSubmit);
   document.getElementById("serahForm")?.addEventListener("submit", handleSerahFormSubmit);
   document.getElementById("loginForm")?.addEventListener("submit", handleLoginSubmit);
   document.getElementById("btnLogout")?.addEventListener("click", handleLogout);
 
-  // Auto hide sidebar (mobile)
-  if (window.innerWidth <= 768) {
-    document.querySelector(".sidebar")?.classList.add("hidden-sidebar");
-    document.querySelector(".container")?.classList.add("sidebar-collapsed");
+  // auto-collapse sidebar on small screens
+  const sidebar = document.querySelector(".sidebar");
+  const container = document.querySelector(".container");
+  if (window.innerWidth <= 768 && sidebar && container) {
+    sidebar.classList.add("hidden-sidebar");
+    container.classList.add("sidebar-collapsed");
   }
 
-  // Cek session
+  // initial session check
   const { data } = await supabase.auth.getSession();
-  handleAuthChange(data.session);
+  handleAuthChange(data.session || null);
 
-  // Listener perubahan login
-  supabase.auth.onAuthStateChange((_e, session) => {
+  // listen auth changes
+  supabase.auth.onAuthStateChange((_event, session) => {
     handleAuthChange(session);
   });
 });
 
 
-
 // =====================================================
-// ===============    EXPOSE KE WINDOWS   ==============
+// ===============   EXPOSE KE GLOBAL WINDOW  ==========
 // =====================================================
+window.showPage = showPage;
+window.toggleSidebar = toggleSidebar;
+window.toggleDiamankan = toggleDiamankan;
 window.filterData = filterData;
-window.viewDetail = viewDetail;
 window.bukaSerahTerima = bukaSerahTerima;
 window.batalSerah = batalSerah;
-window.toggleSidebar = toggleSidebar;
-window.showPage = showPage;
-window.toggleDiamankan = toggleDiamankan;
+window.viewDetail = viewDetail;
+window.muatData = muatData;
+window.handleLoginSubmit = handleLoginSubmit;
+window.handleLogout = handleLogout;
