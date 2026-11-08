@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pemisah Sheet Excel</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="shell">
+  <section class="card" aria-labelledby="judul">
+    <h1 id="judul">Pemisah sheet Excel</h1>
+    <p class="sub">Unggah file .xlsx, pilih aturan, lalu unduh hasilnya.</p>
+
+    <label class="drop" id="drop" tabindex="0">
+      <input type="file" id="file" accept=".xlsx,.xlsm,.xls" hidden>
+      <span class="ico" aria-hidden="true">⬆</span>
+      <span class="drop-title" id="dropTitle">Pilih file .xlsx</span>
+      <span class="drop-note" id="dropNote">Data tetap di perangkat Anda</span>
+    </label>
+    <button type="button" class="link" id="demo">Coba dengan file contoh (10 sheet)</button>
+
+    <fieldset id="step1" disabled>
+      <h2>1. Aturan filter</h2>
+      <select id="rule" aria-label="Aturan filter">
+        <option value="even">Hanya nomor genap</option>
+        <option value="odd">Hanya nomor ganjil</option>
+        <option value="all">Semua nomor</option>
+      </select>
+      <div class="grid2">
+        <input type="number" id="from" min="1" placeholder="Dari (1)" value="1" aria-label="Dari nomor sheet">
+        <input type="number" id="to" min="1" placeholder="Sampai" aria-label="Sampai nomor sheet">
+      </div>
+    </fieldset>
+
+    <fieldset id="step2" disabled>
+      <div class="row">
+        <h2>2. Pilih sheet</h2>
+        <span class="count" id="count">0 dari 0 dipilih</span>
+      </div>
+      <div class="mini">
+        <button type="button" class="link" id="selAll">Pilih semua</button>
+        <button type="button" class="link" id="selNone">Kosongkan</button>
+      </div>
+      <div class="list" id="list" role="group" aria-label="Daftar sheet"><p class="empty">Belum ada file.</p></div>
+    </fieldset>
+
+    <fieldset id="step3" disabled>
+      <h2>3. Unduh hasil</h2>
+      <input type="text" id="name" value="laporan_terfilter" aria-label="Nama file hasil">
+      <button type="button" id="dl" class="primary">⬇ Unduh Excel baru</button>
+      <p class="msg" id="msg" role="status"></p>
+    </fieldset>
+  </section>
+</main>
+<script src="xlsx.full.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
