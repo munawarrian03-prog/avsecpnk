@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pemisah Sheet Excel</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap bar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M9 9h6v14H9zM17 9h6v6h-6zM17 17h6v6h-6z" fill="#fff" opacity=".95"/></svg>
+      <div><div class="brand-name">Pemisah Sheet Excel</div><div class="brand-sub">Pilih, pisahkan, dan unduh sheet dalam hitungan detik</div></div>
+    </div>
+    <span class="badge" title="Berkas diproses di browser Anda dan tidak diunggah ke server">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.4 9.4-8 11-4.6-1.6-8-6-8-11V5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8.5 12l2.5 2.5 4.5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Diproses lokal · data tidak diunggah
+    </span>
+  </div>
+</header>
+
+<main class="wrap">
+  <ol class="stepper" id="stepper" aria-label="Langkah">
+    <li class="active" data-s="1"><span>1</span>Unggah file</li>
+    <li data-s="2"><span>2</span>Atur filter</li>
+    <li data-s="3"><span>3</span>Unduh hasil</li>
+  </ol>
+
+  <div class="layout">
+    <aside class="side">
+      <section class="card" id="cUpload">
+        <h2><span class="n">1</span>Unggah file</h2>
+        <label class="drop" id="drop" tabindex="0">
+          <input type="file" id="file" accept=".xlsx,.xlsm,.xls" hidden>
+          <svg class="dz" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V5m0 0L8 9m4-4l4 4M5 15v3a2 2 0 002 2h10a2 2 0 002-2v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="dt" id="dropTitle">Tarik file ke sini atau <u>telusuri</u></span>
+          <span class="dn" id="dropNote">Format .xlsx, .xlsm, .xls</span>
+        </label>
+        <div class="fileinfo" id="fileinfo" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M14 3v4h4" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+          <div><div class="fn" id="fn"></div><div class="fm" id="fm"></div></div>
+          <button type="button" class="ghost sm" id="reset">Ganti</button>
+        </div>
+        <button type="button" class="link" id="demo">Gunakan file contoh (10 sheet)</button>
+      </section>
+
+      <section class="card" id="cRule">
+        <h2><span class="n">2</span>Atur filter</h2>
+        <fieldset id="step1" disabled>
+          <div><label class="lbl" for="rule">Aturan nomor sheet</label>
+          <select id="rule">
+            <option value="even">Hanya nomor genap</option>
+            <option value="odd">Hanya nomor ganjil</option>
+            <option value="all">Semua nomor</option>
+          </select></div>
+          <div class="grid2">
+            <div><label class="lbl" for="from">Dari nomor</label><input type="number" id="from" min="1" value="1"></div>
+            <div><label class="lbl" for="to">Sampai nomor</label><input type="number" id="to" min="1"></div>
+          </div>
+          <div><label class="lbl" for="kw">Nama mengandung <small>(opsional)</small></label>
+          <input type="text" id="kw" placeholder="mis. Januari"></div>
+        </fieldset>
+      </section>
+
+      <section class="card" id="cOut">
+        <h2><span class="n">3</span>Unduh hasil</h2>
+        <fieldset id="step3" disabled>
+          <div><label class="lbl" for="name">Nama file</label>
+          <div class="suffix"><input type="text" id="name" value="laporan_terfilter"><span>.xlsx</span></div></div>
+          <button type="button" id="dl" class="primary">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span id="dlLabel">Unduh Excel baru</span>
+          </button>
+        </fieldset>
+      </section>
+    </aside>
+
+    <section class="main">
+      <div class="card sheets">
+        <div class="head">
+          <h2>Daftar sheet</h2>
+          <div class="tools">
+            <button type="button" class="ghost sm" id="selAll" disabled>Pilih semua</button>
+            <button type="button" class="ghost sm" id="invert" disabled>Balik</button>
+            <button type="button" class="ghost sm" id="selNone" disabled>Kosongkan</button>
+          </div>
+        </div>
+        <div class="stats">
+          <div><b id="stTotal">0</b><span>Total sheet</span></div>
+          <div class="ok"><b id="stSel">0</b><span>Dipilih</span></div>
+          <div><b id="stOut">0</b><span>Dilewati</span></div>
+        </div>
+        <div class="tablewrap">
+          <table class="tbl" id="tbl">
+            <thead><tr><th class="c"><input type="checkbox" id="master" aria-label="Pilih semua" disabled></th><th class="c">No</th><th>Nama sheet</th><th class="r">Baris</th><th class="r col-h">Kolom</th></tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+          <div class="empty" id="empty">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 10h17M9.5 5v14" stroke="currentColor" stroke-width="1.6"/></svg>
+            <p>Belum ada file</p><small>Unggah file Excel untuk melihat daftar sheet di sini.</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="card preview" id="pv" hidden>
+        <div class="head"><h2>Pratinjau: <span id="pvName"></span></h2><span class="muted" id="pvNote"></span></div>
+        <div class="tablewrap pvwrap"><table class="tbl pvt" id="pvTbl"></table></div>
+      </div>
+    </section>
+  </div>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="xlsx.full.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
